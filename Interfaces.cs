@@ -14,23 +14,15 @@ namespace TileVox
         byte A { get; set; }
     }
 
-    /// <summary>RGB voxel color without an alpha channel.</summary>
-    public interface IVoxelRgbProvider
-    {
-        byte R { get; }
-        byte G { get; }
-        byte B { get; }
-    }
-#if UNITY_5_3_OR_NEWER
-    public interface IUnityColorProvider
-    {
-        Color UColor { get; set; }
-    }
-#endif
-
     public interface IVoxelMaterialIdProvider
     {
         uint MaterialId { get; set; }
+    }
+
+    /// <summary>Lets a voxel type define whether it occupies a cell.</summary>
+    public interface IVoxelSolidProvider
+    {
+        bool IsSolid();
     }
 
     // used by the Tile Map Mesher
@@ -78,10 +70,14 @@ namespace TileVox
         bool TryGetEdge(int directionIndex, out byte position, out sbyte normalX, out sbyte normalY, out sbyte normalZ);
     }
 
+}
+
+namespace TileVox.Meshing
+{
     /// <summary>Builds a self-contained 3D mesh result from voxel data.</summary>
     public interface IVoxelDataMesher3D
     {
         /// <summary>Generates geometry and numeric material assignments.</summary>
-        MesherResult3D BuildMesh();
+        StructureMesherResult3D BuildMesh();
     }
 }

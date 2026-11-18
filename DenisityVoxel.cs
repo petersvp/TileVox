@@ -5,12 +5,13 @@ namespace TileVox
 {
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct TerrainVoxel : IVoxelDensityProvider, IVoxelRgbProvider
+    public struct TerrainVoxel : IVoxelDensityProvider, IVoxelColorProvider
     {
-        public sbyte Density; // -128 (solid) to +127 (air), 0 = surface
+        public sbyte Density; // -128 (air) to +127 (solid), 0 = surface
         public byte R;
         public byte G;
         public byte B;
+        public byte A;
 
         // 4 material weights (0..255 each) for texture splatting/blending
         public byte Weight0;
@@ -19,14 +20,15 @@ namespace TileVox
         public byte Weight3;
 
         sbyte IVoxelDensityProvider.Density { get => Density; set => Density = value; }
-        byte IVoxelRgbProvider.R => R;
-        byte IVoxelRgbProvider.G => G;
-        byte IVoxelRgbProvider.B => B;
+        byte IVoxelColorProvider.R { get => R; set => R = value; }
+        byte IVoxelColorProvider.G { get => G; set => G = value; }
+        byte IVoxelColorProvider.B { get => B; set => B = value; }
+        byte IVoxelColorProvider.A { get => A; set => A = value; }
 
         public readonly bool IsSolid
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => Density < 0;
+            get => Density > 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
