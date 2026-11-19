@@ -90,10 +90,11 @@ namespace TileVox.Meshing
         {
             var result = new StructureMesherResult3D();
             result.Quads = new List<Face>();
-            result.FloorBoundaries = new List<Edge>();
-            result.GroundBoundaries = new List<Edge>();
-            result.CeilingBoundaries = new List<Edge>();
-            result.WallBoundaries = new List<Edge>();
+            result.LedgeBoundaries = new List<Edge>();
+            result.BaseBoundaries = new List<Edge>();
+            result.WallToCeilingBoundaries = new List<Edge>();
+            result.CeilingToWallBoundaries = new List<Edge>();
+            result.WallCornerBoundaries = new List<Edge>();
             result.MaterialBoundaries = new List<Edge>();
             result.ColorBoundaries = new List<Edge>();
             var source = data ?? throw new InvalidOperationException("A voxel source is required.");
@@ -134,9 +135,13 @@ namespace TileVox.Meshing
                         if (cells.ContainsKey(new Vector3i(x, y, z))) continue;
                         faces.Add(new FaceData
                         {
-                            x = p.x, y = p.y, z = p.z,
-                            axis = axis, sign = sign,
-                            color = entry.Value.color, material = entry.Value.material
+                            x = p.x,
+                            y = p.y,
+                            z = p.z,
+                            axis = axis,
+                            sign = sign,
+                            color = entry.Value.color,
+                            material = entry.Value.material
                         });
                     }
             }
@@ -200,10 +205,11 @@ namespace TileVox.Meshing
                 }
             }
             BuildBoundaries(result, faces);
-            MergeSegments(result.FloorBoundaries);
-            MergeSegments(result.GroundBoundaries);
-            MergeSegments(result.CeilingBoundaries);
-            MergeSegments(result.WallBoundaries);
+            MergeSegments(result.LedgeBoundaries);
+            MergeSegments(result.BaseBoundaries);
+            MergeSegments(result.WallToCeilingBoundaries);
+            MergeSegments(result.CeilingToWallBoundaries);
+            MergeSegments(result.WallCornerBoundaries);
             MergeSegments(result.MaterialBoundaries);
             MergeSegments(result.ColorBoundaries);
         }
@@ -253,20 +259,24 @@ namespace TileVox.Meshing
             foreach (var entry in edges)
             {
                 EdgeData edge = entry.Value;
+                // A single face here is an open mesher boundary, not a surface transition.
+                if (edge.faceCount != 2) continue;
                 var segment = new Edge(ToVector(entry.Key.a), ToVector(entry.Key.b));
                 if (edge.materialSeam) result.MaterialBoundaries.Add(segment);
                 if (edge.colorSeam) result.ColorBoundaries.Add(segment);
                 if (edge.top)
                 {
-                    if (edge.sideBelow || edge.wallMask == 0 && edge.faceCount == 1)
-                        result.FloorBoundaries.Add(segment);
-                    if (edge.sideAbove) result.GroundBoundaries.Add(segment);
+                    if (edge.sideBelow) result.LedgeBoundaries.Add(segment);
+                    if (edge.sideAbove) result.BaseBoundaries.Add(segment);
                 }
                 else if (edge.bottom && edge.wallMask != 0)
-                    result.CeilingBoundaries.Add(segment);
+                {
+                    if (edge.sideBelow) result.WallToCeilingBoundaries.Add(segment);
+                    if (edge.sideAbove) result.CeilingToWallBoundaries.Add(segment);
+                }
                 else if (edge.wallMask != 0 &&
-                    (edge.faceCount == 1 || (edge.wallMask & (edge.wallMask - 1)) != 0))
-                    result.WallBoundaries.Add(segment);
+                    (edge.wallMask & (edge.wallMask - 1)) != 0)
+                    result.WallCornerBoundaries.Add(segment);
             }
         }
 
@@ -393,5 +403,25 @@ namespace TileVox.Meshing
         }
 
         private static uint GetMaterial(T voxel) => voxel is IVoxelMaterialIdProvider material ? material.MaterialId : 0;
+
+        public IEnumerable<MesherEdgeSet> GetEdgeSets(StructureMesherResult3D result)
+        {
+
+            return new List<MesherEdgeSet>
+            {
+                new MesherEdgeSet { Name = "FloorBoundaries", Edges = ()=>result.LedgeBoundaries },
+                new MesherEdgeSet { Name = "GroundBoundaries", Edges = ()=>result.BaseBoundaries },
+                new MesherEdgeSet { Name = "WallToCeilingBoundaries", Edges = ()=>result.WallToCeilingBoundaries },
+                new MesherEdgeSet { Name = "CeilingToWallBoundaries", Edges = ()=>result.CeilingToWallBoundaries },
+                new MesherEdgeSet { Name = "WallBoundaries", Edges = ()=>result.WallCornerBoundaries },
+                new MesherEdgeSet { Name = "MaterialBoundaries", Edges = ()=>result.MaterialBoundaries },
+                new MesherEdgeSet { Name = "ColorBoundaries", Edges = ()=>result.ColorBoundaries }
+            };
+        }
+
+        public IEnumerable<MesherFaceSet> GetFaceSets(StructureMesherResult3D result)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

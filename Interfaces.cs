@@ -1,5 +1,8 @@
 ﻿#if UNITY_5_3_OR_NEWER
 using g4;
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 #endif
 
@@ -74,10 +77,24 @@ namespace TileVox
 
 namespace TileVox.Meshing
 {
+    public class MesherEdgeSet
+    {
+        public string Name;
+        public Func<IEnumerable<Edge>> Edges;
+    }
+    public class MesherFaceSet
+    {
+        public string Name;
+        public IEnumerable<Face> Faces;
+    }
+
     /// <summary>Builds a self-contained 3D mesh result from voxel data.</summary>
     public interface IVoxelDataMesher3D
     {
         /// <summary>Generates geometry and numeric material assignments.</summary>
         StructureMesherResult3D BuildMesh();
+
+        IEnumerable<MesherEdgeSet> GetEdgeSets(StructureMesherResult3D result);
+        IEnumerable<MesherFaceSet> GetFaceSets(StructureMesherResult3D result);
     }
 }
